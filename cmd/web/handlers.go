@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 )
-
-const PORT = 9999
 
 func home(w http.ResponseWriter, r *http.Request) {
 
@@ -15,7 +14,31 @@ func home(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Write([]byte("Hello"))
+
+	files := []string{
+		"./ui/html/base.tmpl.html",
+		"./ui/html/pages/home.tmpl.html",
+		"./ui/html/pages/error.tmpl.html",
+	}
+
+	ts, err := template.ParseFiles(files...)
+
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	err = ts.ExecuteTemplate(w, "error", nil)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+	}
+
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
@@ -45,21 +68,4 @@ func createSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte("Snippet: Create"))
-}
-
-//#endregion
-
-func main() {
-
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/hello", hello)
-
-	mux.HandleFunc("/snippet/view/", viewSnippet)
-	mux.HandleFunc("/snippet/create", createSnippet)
-
-	log.Println(("Starting server on port " + strconv.Itoa(PORT)))
-	error := http.ListenAndServe(":"+strconv.Itoa(PORT), mux)
-	log.Fatal(error)
 }
